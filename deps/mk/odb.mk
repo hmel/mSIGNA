@@ -4,9 +4,13 @@ ifndef DB
         DB = sqlite
     else ifneq ($(wildcard $(GLOBAL_SYSROOT)/lib/libodb-sqlite.*),)
         DB = sqlite
+    else ifneq ($(wildcard $(GLOBAL_SYSROOT)/lib/x86_64-linux-gnu/libodb-sqlite.*),)
+        DB = sqlite
     else ifneq ($(wildcard $(LOCAL_SYSROOT)/lib/libodb-mysql.*),)
         DB = mysql
     else ifneq ($(wildcard $(GLOBAL_SYSROOT)/lib/libodb-mysql.*),)
+        DB = mysql
+    else ifneq ($(wildcard $(GLOBAL_SYSROOT)/lib/x86_64-linux-gnu/libodb-mysql.*),)
         DB = mysql
     endif
 endif
