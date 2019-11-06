@@ -285,7 +285,7 @@ string NetworkAddress::toString() const
     stringstream ss;
     if (this->hasTime)
         ss << "time: " << timeToString(this->time) << ", ";
-        ss << "services: " << this->services << ", ip: " << this->ipv6.toStringAuto() << ", port: " << this->port;
+    ss << "services: " << this->services << ", ip: " << this->ipv6.toStringAuto() << ", port: " << this->port;
     return ss.str();
 }
 

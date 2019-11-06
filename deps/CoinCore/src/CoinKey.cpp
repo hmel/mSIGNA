@@ -89,7 +89,7 @@ int static inline ECDSA_SIG_recover_key_GFp(EC_KEY* eckey, ECDSA_SIG* ecsig, con
     x = BN_CTX_get(ctx);
     if (!BN_copy(x, order)) { ret=-1; goto err; }
     if (!BN_mul_word(x, i)) { ret=-1; goto err; }
-    if (!BN_add(x, x, ecsig->r)) { ret=-1; goto err; }
+    if (!BN_add(x, x, ECDSA_SIG_get0_r(ecsig))) { ret=-1; goto err; }
     field = BN_CTX_get(ctx);
     if (!EC_GROUP_get_curve_GFp(group, field, NULL, NULL, ctx)) { ret=-2; goto err; }
     if (BN_cmp(x, field) >= 0) { ret=0; goto err; }
@@ -110,9 +110,9 @@ int static inline ECDSA_SIG_recover_key_GFp(EC_KEY* eckey, ECDSA_SIG* ecsig, con
     if (!BN_zero(zero)) { ret=-1; goto err; }
     if (!BN_mod_sub(e, zero, e, order, ctx)) { ret=-1; goto err; }
     rr = BN_CTX_get(ctx);
-    if (!BN_mod_inverse(rr, ecsig->r, order, ctx)) { ret=-1; goto err; }
+    if (!BN_mod_inverse(rr, ECDSA_SIG_get0_r(ecsig), order, ctx)) { ret=-1; goto err; }
     sor = BN_CTX_get(ctx);
-    if (!BN_mod_mul(sor, ecsig->s, rr, order, ctx)) { ret=-1; goto err; }
+    if (!BN_mod_mul(sor, ECDSA_SIG_get0_s(ecsig), rr, order, ctx)) { ret=-1; goto err; }
     eor = BN_CTX_get(ctx);
     if (!BN_mod_mul(eor, e, rr, order, ctx)) { ret=-1; goto err; }
     if (!EC_POINT_mul(group, Q, eor, R, sor, ctx)) { ret=-2; goto err; }
@@ -316,8 +316,8 @@ bool CoinKey::signCompact(const uchar_vector& digest, uchar_vector& signature)
 
     signature.clear();
     signature.resize(65,0);
-    int nBitsR = BN_num_bits(pSig->r);
-    int nBitsS = BN_num_bits(pSig->s);
+    int nBitsR = BN_num_bits(ECDSA_SIG_get0_r(pSig));
+    int nBitsS = BN_num_bits(ECDSA_SIG_get0_s(pSig));
     if (nBitsR <= 256 && nBitsS <= 256) {
         int nRecId = -1;
         for (int i = 0; i < 4; i++) {
@@ -335,8 +335,8 @@ bool CoinKey::signCompact(const uchar_vector& digest, uchar_vector& signature)
         throw CoinKeyError("CoinKey::signCompact() : unable to construct recoverable key");
 
         signature[0] = nRecId + 27;
-        BN_bn2bin(pSig->r, &signature[33 - (nBitsR + 7) / 8]);
-        BN_bn2bin(pSig->s, &signature[65 - (nBitsS + 7) / 8]);
+        BN_bn2bin(ECDSA_SIG_get0_r(pSig), &signature[33 - (nBitsR + 7) / 8]);
+        BN_bn2bin(ECDSA_SIG_get0_s(pSig), &signature[65 - (nBitsS + 7) / 8]);
         rval = true;
     }
     ECDSA_SIG_free(pSig);
@@ -350,8 +350,9 @@ bool CoinKey::setCompactSignature(const uchar_vector& digest, const uchar_vector
     if (signature[0] < 27 || signature[0] >= 31) return false;
 
     ECDSA_SIG *pSig = ECDSA_SIG_new();
-    BN_bin2bn(&signature[1], 32, pSig->r);
-    BN_bin2bn(&signature[33], 32, pSig->s);
+    BIGNUM* r = BN_bin2bn(&signature[1], 32, nullptr);
+    BIGNUM* s = BN_bin2bn(&signature[33], 32, nullptr);
+    ECDSA_SIG_set0(pSig, r, s);
 
     EC_KEY_free(this->pKey);
     this->pKey = EC_KEY_new_by_curve_name(EC_CURVE_NAME);

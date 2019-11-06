@@ -337,8 +337,13 @@ bytes_t CoinCrypto::secp256k1_sigToLowS(const bytes_t& signature)
         BN_clear_free(order);
         throw std::runtime_error("secp256k1_sigToLowS(): BN_bin2bn failed.");
     }
-    
-    if (BN_cmp(sig->s, halforder) > 0) { BN_sub(sig->s, order, sig->s); }
+
+
+    if (BN_cmp(ECDSA_SIG_get0_s(sig), halforder) > 0) {
+      BIGNUM *res = BN_new();
+      BN_sub(res, order, ECDSA_SIG_get0_s(sig));
+      ECDSA_SIG_set0(sig, nullptr, res);
+    }
 
     BN_clear_free(order);
     BN_clear_free(halforder);

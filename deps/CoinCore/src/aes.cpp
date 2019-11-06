@@ -96,22 +96,23 @@ unsigned char* encrypt(EVP_CIPHER_CTX* e, unsigned char* plaintext, int* len)
 
 bytes_t encrypt(const secure_bytes_t& key, const secure_bytes_t& plaintext, bool useSalt, uint64_t salt)
 {
-    EVP_CIPHER_CTX en, de;
+  EVP_CIPHER_CTX *en = EVP_CIPHER_CTX_new();
+  EVP_CIPHER_CTX *de = EVP_CIPHER_CTX_new();
 
     int key_len = key.size();
 
     /* gen key and iv. init the cipher ctx object */
     const unsigned char* pSalt = useSalt ? (const unsigned char*)&salt : nullptr;
-    init(&key[0], key_len, pSalt, &en, &de);
+    init(&key[0], key_len, pSalt, en, de);
 
     int len = plaintext.size();
-    unsigned char* ciphertext_ = encrypt(&en, (unsigned char*)&plaintext[0], &len);
+    unsigned char* ciphertext_ = encrypt(en, (unsigned char*)&plaintext[0], &len);
 
     secure_bytes_t ciphertext(ciphertext_, ciphertext_ + len);
 
     free(ciphertext_);
-    EVP_CIPHER_CTX_cleanup(&en);
-    EVP_CIPHER_CTX_cleanup(&de);
+    EVP_CIPHER_CTX_free(en);
+    EVP_CIPHER_CTX_free(de);
 
     return ciphertext;
 }
@@ -146,32 +147,33 @@ unsigned char* decrypt(EVP_CIPHER_CTX* e, unsigned char* ciphertext, int* len)
 
 secure_bytes_t decrypt(const secure_bytes_t& key, const bytes_t& ciphertext, bool useSalt, uint64_t salt)
 {
-    EVP_CIPHER_CTX en, de;
+  EVP_CIPHER_CTX *en = EVP_CIPHER_CTX_new();
+  EVP_CIPHER_CTX *de = EVP_CIPHER_CTX_new();
 
     int key_len = key.size();
 
     /* gen key and iv. init the cipher ctx object */
     const unsigned char* pSalt = useSalt ? (const unsigned char*)&salt : nullptr;
-    init(&key[0], key_len, pSalt, &en, &de);
+    init(&key[0], key_len, pSalt, en, de);
 
 
     //EVP_CIPHER_CTX_set_padding(&de, 0);
     int len = ciphertext.size();
-    unsigned char* plaintext_ = decrypt(&de, (unsigned char*)&ciphertext[0], &len);
+    unsigned char* plaintext_ = decrypt(de, (unsigned char*)&ciphertext[0], &len);
 
     if (len <= 0)
     {
         free(plaintext_);
-        EVP_CIPHER_CTX_cleanup(&en);
-        EVP_CIPHER_CTX_cleanup(&de);
+        EVP_CIPHER_CTX_free(en);
+        EVP_CIPHER_CTX_free(de);
         throw AESDecryptException();
     }
 
     secure_bytes_t plaintext(plaintext_, plaintext_ + len);
 
     free(plaintext_);
-    EVP_CIPHER_CTX_cleanup(&en);
-    EVP_CIPHER_CTX_cleanup(&de);
+    EVP_CIPHER_CTX_free(en);
+    EVP_CIPHER_CTX_free(de);
 
     return plaintext;
 }
